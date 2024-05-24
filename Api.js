@@ -1,5 +1,5 @@
 const express = require('express');
-const mysql = require('mysql2'); // Use mysql2 instead of mysql
+const mysql = require('mysql2/promise'); // Use mysql2/promise instead of mysql2
 const cors = require('cors');
 const bodyParser = require('body-parser');
 require('dotenv').config();
@@ -28,42 +28,34 @@ const pool = mysql.createPool({
 });
 
 // Custom query function to execute SQL queries
-const query = (sql, params) => {
-  return new Promise((resolve, reject) => {
-    pool.getConnection((err, connection) => {
-      if (err) {
-        reject(err);
-        return;
-      }
-
-      connection.query(sql, params, (err, rows) => {
-        connection.release();
-
-        if (err) {
-          reject(err);
-        } else {
-          resolve(rows);
-        }
-      });
-    });
-  });
+const query = async (sql, params) => {
+  const connection = await pool.getConnection();
+  try {
+    const [rows, fields] = await connection.query(sql, params);
+    return rows;
+  } catch (error) {
+    throw error;
+  } finally {
+    connection.release();
+  }
 };
 
+// Function to convert buffer to Base64
 function bufferToBase64(buffer) {
-    return Buffer.from(buffer).toString('base64');
-  } 
+  return Buffer.from(buffer).toString('base64');
+}
+
+// Route to check college code
 app.post('/check', async (req, res) => {
-  const { college_code } = req.body;
-  const sql = `SELECT * FROM ${databasecollege}.College WHERE college_code = ?`;
-
   try {
-    const [results] = await pool.query(sql, [college_code]);
-
+    const { college_code } = req.body;
+    const sql = 'SELECT * FROM colleges.College WHERE college_code = ?';
+    const results = await query(sql, [college_code]);
+    
     if (results.length === 0) {
       return res.status(404).json({ error: 'College code not found' });
     }
-
-    // College code exists
+    
     return res.status(200).json({ success: true, message: 'College code found' });
   } catch (error) {
     console.error('Error executing query:', error);
@@ -71,16 +63,16 @@ app.post('/check', async (req, res) => {
   }
 });
 
-
+// Route to handle login
 app.post('/login', async (req, res) => {
-  const { studentId, collegeCode, password } = req.body;
-
-  // Check if all required parameters are provided
-  if (!studentId || !collegeCode || !password) {
-    return res.status(400).json({ error: 'studentId, collegeCode, and password are required parameters' });
-  }
-
   try {
+    const { studentId, collegeCode, password } = req.body;
+
+    // Check if all required parameters are provided
+    if (!studentId || !collegeCode || !password) {
+      return res.status(400).json({ error: 'studentId, collegeCode, and password are required parameters' });
+    }
+
     // Define the SQL query to fetch student information and match the password
     const sql = `
       SELECT 
@@ -92,50 +84,64 @@ app.post('/login', async (req, res) => {
         s.stud_dob, 
         s.mobile, 
         s.password, 
-        TO_BASE64(s.profile_img) AS profile_img, 
+        s.profile_img AS profile_img, 
         c.college_code
       FROM 
-        ${collegeName}.Student s
+      ${collegeName}.Student s
       JOIN 
-        ${databasecollege}.College c ON s.college_id = c.CollegeID
+      ${databasecollege}.College c ON s.college_id = c.CollegeID
       WHERE 
         s.studentid = ? AND c.college_code = ? AND s.password = ?
     `;
 
     // Execute the query with studentId, collegeCode, and password as parameters
-    const [results] = await pool.query(sql, [studentId, collegeCode, password]);
+    const results = await query(sql, [studentId, collegeCode, password]);
 
     // Check if any rows were returned
     if (results.length === 0) {
-      // No student found with the provided studentId, collegeCode, and password
       return res.status(404).json({ error: 'Student not found or invalid credentials' });
     }
 
-    // Student information found, convert profile_img to base64 and return it as JSON response
+    // Student information found, send the profile_img directly as Base64 in the response
     const student = results[0];
-    const base64ProfileImg = student.profile_img ? Buffer.from(student.profile_img, 'binary').toString('base64') : null;
-    const studentData = { ...student, profile_img: base64ProfileImg };
 
     // Verify password (already matched in the query)
     if (student.password !== password) {
       return res.status(401).json({ error: 'Invalid password' });
     }
 
-    return res.status(200).json({ success: true, message: 'Successfully logged in', data: studentData });
+    // Send the student data along with the Base64 image
+    const responseData = {
+      success: true,
+      message: 'Successfully logged in',
+      data: {
+        studentid: student.studentid,
+        Name: student.Name,
+        std: student.std,
+        roll_no: student.roll_no,
+        division: student.division,
+        stud_dob: student.stud_dob,
+        mobile: student.mobile,
+        college_code: student.college_code,
+        profile_img: student.profile_img ? student.profile_img.toString('base64') : null
+      }
+    };
+
+    return res.status(200).json(responseData);
   } catch (error) {
     console.error('Error executing query:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-
+// Route to fetch dashboard data
 app.get('/dashboard', async (req, res) => {
   try {
     // Define the SQL query to select dashboard data
     const sql = `SELECT dashboard_id, dashboard_image, dashboard_title FROM colleges.dashboard`;
 
     // Execute the query asynchronously using pool promise
-    const [rows, fields] = await pool.query(sql);
+    const rows = await query(sql);
 
     // Map the results to format the response data
     const rowsWithBase64Image = rows.map(row => ({
@@ -152,11 +158,7 @@ app.get('/dashboard', async (req, res) => {
   }
 });
 
-
-       
-      
-    
-        
+// Start the server
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
