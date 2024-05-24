@@ -51,46 +51,28 @@ const query = (sql, params) => {
 
 function bufferToBase64(buffer) {
     return Buffer.from(buffer).toString('base64');
-  } app.post('/check', (req, res) => {
-    const { college_code } = req.body;
-    const sql = 'SELECT * FROM colleges.College WHERE college_code = ?';
-  
-    pool.query(sql, [college_code], (err, results) => {
-        if (err) {
-            console.error('Error executing query:', err);
-            return res.status(500).json({ error: 'Internal server error' });
-        }
-  
-        if (results.length === 0) {
-            return res.status(404).json({ error: 'College code not found' });
-        }
-  
-        // College code exists
-        return res.status(200).json({ success: true, message: 'College code found' });
-    });
-  });
-  
-  app.post('/check', (req, res) => {
-    const { college_code } = req.body;
-    const sql = 'SELECT * FROM ${databasecollege}.College WHERE college_code = ?';
-  
-    pool.query(sql, [college_code], (err, results) => {
-        if (err) {
-            console.error('Error executing query:', err);
-            return res.status(500).json({ error: 'Internal server error' });
-        }
-  
-        if (results.length === 0) {
-            return res.status(404).json({ error: 'College code not found' });
-        }
-  
-        // College code exists
-        return res.status(200).json({ success: true, message: 'College code found' });
-    });
-  });
-  
-  
-  app.post('/login', (req, res) => {
+  } 
+app.post('/check', async (req, res) => {
+  const { college_code } = req.body;
+  const sql = `SELECT * FROM ${databasecollege}.College WHERE college_code = ?`;
+
+  try {
+    const [results] = await pool.query(sql, [college_code]);
+
+    if (results.length === 0) {
+      return res.status(404).json({ error: 'College code not found' });
+    }
+
+    // College code exists
+    return res.status(200).json({ success: true, message: 'College code found' });
+  } catch (error) {
+    console.error('Error executing query:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
+app.post('/login', async (req, res) => {
   const { studentId, collegeCode, password } = req.body;
 
   // Check if all required parameters are provided
@@ -98,71 +80,56 @@ function bufferToBase64(buffer) {
     return res.status(400).json({ error: 'studentId, collegeCode, and password are required parameters' });
   }
 
-  // Define the SQL query to fetch student information and match the password
-  const sql = `
-    SELECT 
-      s.studentid, 
-      s.Name, 
-      s.std, 
-      s.roll_no, 
-      s.division, 
-      s.stud_dob, 
-      s.mobile, 
-      s.password, 
-      s.profile_img AS profile_img, 
-      c.college_code
-    FROM 
-    ${collegeName}.Student s
-    JOIN 
-    ${databasecollege}.College c ON s.college_id = c.CollegeID
-    WHERE 
-      s.studentid = ? AND c.college_code = ? AND s.password = ?
-  `;
+  try {
+    // Define the SQL query to fetch student information and match the password
+    const sql = `
+      SELECT 
+        s.studentid, 
+        s.Name, 
+        s.std, 
+        s.roll_no, 
+        s.division, 
+        s.stud_dob, 
+        s.mobile, 
+        s.password, 
+        TO_BASE64(s.profile_img) AS profile_img, 
+        c.college_code
+      FROM 
+        ${collegeName}.Student s
+      JOIN 
+        ${databasecollege}.College c ON s.college_id = c.CollegeID
+      WHERE 
+        s.studentid = ? AND c.college_code = ? AND s.password = ?
+    `;
 
-  // Execute the query with studentId, collegeCode, and password as parameters
-  pool.query(sql, [studentId, collegeCode, password], (err, results) => {
-    if (err) {
-      console.error('Error executing query:', err);
-      return res.status(500).json({ error: 'Internal server error' });
-    }
+    // Execute the query with studentId, collegeCode, and password as parameters
+    const [results] = await pool.query(sql, [studentId, collegeCode, password]);
 
     // Check if any rows were returned
     if (results.length === 0) {
       // No student found with the provided studentId, collegeCode, and password
       return res.status(404).json({ error: 'Student not found or invalid credentials' });
-    } else {
-      // Student information found, send the profile_img directly as Base64 in the response
-      const student = results[0];
-
-      // Verify password (already matched in the query)
-      if (student.password !== password) {
-        return res.status(401).json({ error: 'Invalid password' });
-      }
-
-      // Send the student data along with the Base64 image
-      const responseData = {
-        success: true,
-        message: 'Successfully logged in',
-        data: {
-          studentid: student.studentid,
-          Name: student.Name,
-          std: student.std,
-          roll_no: student.roll_no,
-          division: student.division,
-          stud_dob: student.stud_dob,
-          mobile: student.mobile,
-          college_code: student.college_code,
-          profile_img: student.profile_img ? student.profile_img.toString('base64') : null
-        }
-      };
-
-      return res.status(200).json(responseData);
     }
-  });
+
+    // Student information found, convert profile_img to base64 and return it as JSON response
+    const student = results[0];
+    const base64ProfileImg = student.profile_img ? Buffer.from(student.profile_img, 'binary').toString('base64') : null;
+    const studentData = { ...student, profile_img: base64ProfileImg };
+
+    // Verify password (already matched in the query)
+    if (student.password !== password) {
+      return res.status(401).json({ error: 'Invalid password' });
+    }
+
+    return res.status(200).json({ success: true, message: 'Successfully logged in', data: studentData });
+  } catch (error) {
+    console.error('Error executing query:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
 
-/*app.get('/dashboard', async (req, res) => {
+app.get('/dashboard', async (req, res) => {
   try {
     // Define the SQL query to select dashboard data
     const sql = `SELECT dashboard_id, dashboard_image, dashboard_title FROM colleges.dashboard`;
@@ -183,7 +150,7 @@ function bufferToBase64(buffer) {
     console.error('Error fetching dashboard data:', error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
-});*/
+});
 
 
        
