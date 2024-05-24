@@ -158,6 +158,38 @@ app.get('/dashboard', async (req, res) => {
   }
 });
 
+app.get('/subjects', async (req, res) => {
+  const { standard } = req.query;
+
+  // Check if standard parameter is provided and valid
+  if (!standard) {
+    return res.status(400).json({ error: 'Standard parameter is required' });
+  }
+
+  try {
+    // Define the SQL query to select subject data filtered by standard
+    const sql = 'SELECT subject_code, subject_name, stand, division, subject_code_prefixed, image FROM Subject WHERE stand = ?';
+
+    // Execute the query with the standard parameter
+    const [rows, fields] = await pool.query(sql, [standard]);
+
+    // Map the results to format the response data
+    const subjectData = rows.map(subject => ({
+      subject_code: subject.subject_code,
+      subject_name: subject.subject_name,
+      stand: subject.stand,
+      division: subject.division,
+      subject_code_prefixed: subject.subject_code_prefixed,
+      image: subject.image ? bufferToBase64(subject.image) : null // Assuming bufferToBase64 is defined
+    }));
+
+    // Return the subject data as JSON response
+    res.json(subjectData);
+  } catch (err) {
+    console.error('Error fetching subject data:', err);
+    res.status(500).json({ error: 'Error fetching subject data' });
+  }
+});
 // Start the server
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
