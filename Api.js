@@ -147,7 +147,7 @@ app.get('/dashboard', async (req, res) => {
     const rowsWithBase64Image = rows.map(row => ({
       id: row.dashboard_id,
       title: row.dashboard_title,
-      image: row.dashboard_image ? `data:image/jpeg;base64,${bufferToBase64(row.dashboard_image)}` : null // Convert image to base64 if available
+      image: row.dashboard_image ? `${bufferToBase64(row.dashboard_image)}` : null // Convert image to base64 if available
     }));
 
     // Return the dashboard data as JSON response
