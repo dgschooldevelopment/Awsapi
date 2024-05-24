@@ -162,7 +162,30 @@ function bufferToBase64(buffer) {
 });
 
 
-  
+  app.get('/dashboard', async (req, res) => {
+  try {
+    // Define the SQL query to select dashboard data
+    const sql = `SELECT dashboard_id, dashboard_image, dashboard_title FROM colleges.dashboard`;
+
+    // Execute the query asynchronously using pool promise
+    const [rows, fields] = await pool.query(sql);
+
+    // Map the results to format the response data
+    const rowsWithBase64Image = rows.map(row => ({
+      id: row.dashboard_id,
+      title: row.dashboard_title,
+      image: row.dashboard_image ? `data:image/jpeg;base64,${bufferToBase64(row.dashboard_image)}` : null // Convert image to base64 if available
+    }));
+
+    // Return the dashboard data as JSON response
+    res.json(rowsWithBase64Image);
+  } catch (error) {
+    console.error('Error fetching dashboard data:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+
        
       
     
