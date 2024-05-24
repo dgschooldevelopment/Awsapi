@@ -158,7 +158,8 @@ app.get('/dashboard', async (req, res) => {
   }
 });
 
-app.get('/subjects', async (req, res) => {
+
+   app.get('/subjects', async (req, res) => {
   const { standard } = req.query;
 
   // Check if standard parameter is provided and valid
@@ -168,7 +169,8 @@ app.get('/subjects', async (req, res) => {
 
   try {
     // Define the SQL query to select subject data filtered by standard
-    const sql = 'SELECT subject_code, subject_name, stand, division, subject_code_prefixed, image FROM Subject WHERE stand = ?';
+    // Define the SQL query to select subject data filtered by standard
+const sql = `SELECT subject_code, subject_name, stand, division, subject_code_prefixed, image FROM ${databasecollege}.Subject WHERE stand = ?`;
 
     // Execute the query with the standard parameter
     const [rows, fields] = await pool.query(sql, [standard]);
