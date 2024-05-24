@@ -90,62 +90,83 @@ function bufferToBase64(buffer) {
   });
   
   
-  
   app.post('/login', (req, res) => {
-    const { studentId, collegeCode, password } = req.body;
-  
-    // Check if all required parameters are provided
-    if (!studentId || !collegeCode || !password) {
-      return res.status(400).json({ error: 'studentId, collegeCode, and password are required parameters' });
+  const { studentId, collegeCode, password } = req.body;
+
+  // Check if all required parameters are provided
+  if (!studentId || !collegeCode || !password) {
+    return res.status(400).json({ error: 'studentId, collegeCode, and password are required parameters' });
+  }
+
+  // Define the SQL query to fetch student information and match the password
+  const sql = `
+    SELECT 
+      s.studentid, 
+      s.Name, 
+      s.std, 
+      s.roll_no, 
+      s.division, 
+      s.stud_dob, 
+      s.mobile, 
+      s.password, 
+      s.profile_img AS profile_img, 
+      c.college_code
+    FROM 
+    ${collegeName}.Student s
+    JOIN 
+    ${databasecollege}.College c ON s.college_id = c.CollegeID
+    WHERE 
+      s.studentid = ? AND c.college_code = ? AND s.password = ?
+  `;
+
+  // Execute the query with studentId, collegeCode, and password as parameters
+  pool.query(sql, [studentId, collegeCode, password], (err, results) => {
+    if (err) {
+      console.error('Error executing query:', err);
+      return res.status(500).json({ error: 'Internal server error' });
     }
-  
-    // Define the SQL query to fetch student information and match the password
-    const sql = `
-      SELECT 
-        s.studentid, 
-        s.Name, 
-        s.std, 
-        s.roll_no, 
-        s.division, 
-        s.stud_dob, 
-        s.mobile, 
-        s.password, 
-        TO_BASE64(s.profile_img) AS profile_img, 
-        c.college_code
-      FROM 
-      ${collegeName}.Student s
-      JOIN 
-      ${databasecollege}.College c ON s.college_id = c.CollegeID
-      WHERE 
-        s.studentid = ? AND c.college_code = ? AND s.password = ?
-    `;
-  
-    // Execute the query with studentId, collegeCode, and password as parameters
-    pool.query(sql, [studentId, collegeCode, password], (err, results) => {
-      if (err) {
-        console.error('Error executing query:', err);
-        return res.status(500).json({ error: 'Internal server error' });
+
+    // Check if any rows were returned
+    if (results.length === 0) {
+      // No student found with the provided studentId, collegeCode, and password
+      return res.status(404).json({ error: 'Student not found or invalid credentials' });
+    } else {
+      // Student information found, send the profile_img directly as Base64 in the response
+      const student = results[0];
+
+      // Verify password (already matched in the query)
+      if (student.password !== password) {
+        return res.status(401).json({ error: 'Invalid password' });
       }
-  
-      // Check if any rows were returned
-      if (results.length === 0) {
-        // No student found with the provided studentId, collegeCode, and password
-        return res.status(404).json({ error: 'Student not found or invalid credentials' });
-      } else {
-        // Student information found, convert profile_img to base64 and return it as JSON response
-        const student = results[0];
-        const base64ProfileImg = student.profile_img ? Buffer.from(student.profile_img, 'binary').toString('base64') : null;
-        const studentData = { ...student, profile_img: base64ProfileImg };
-  
-        // Verify password (already matched in the query)
-        if (student.password !== password) {
-          return res.status(401).json({ error: 'Invalid password' });
+
+      // Send the student data along with the Base64 image
+      const responseData = {
+        success: true,
+        message: 'Successfully logged in',
+        data: {
+          studentid: student.studentid,
+          Name: student.Name,
+          std: student.std,
+          roll_no: student.roll_no,
+          division: student.division,
+          stud_dob: student.stud_dob,
+          mobile: student.mobile,
+          college_code: student.college_code,
+          profile_img: student.profile_img ? student.profile_img.toString('base64') : null
         }
-  
-        return res.status(200).json({ success: true, message: 'Successfully logged in', data: studentData });
-      }
-    });
+      };
+
+      return res.status(200).json(responseData);
+    }
   });
+});
+
+
+  
+       
+      
+    
+        
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
