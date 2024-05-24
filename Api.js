@@ -1,5 +1,5 @@
 const express = require('express');
-const mysql = require('mysql2'); // Use mysql2 instead of mysql
+const mysql = require('mysql2/promise'); // Use mysql2 instead of mysql
 const cors = require('cors');
 const bodyParser = require('body-parser');
 require('dotenv').config();
