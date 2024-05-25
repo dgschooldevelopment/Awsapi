@@ -192,6 +192,68 @@ const sql = `SELECT subject_code, subject_name, stand, division, subject_code_pr
     res.status(500).json({ error: 'Error fetching subject data' });
   }
 });
+
+
+app.post('/homework_pending', async (req, res) => {
+  try {
+    // Extract parameters from the request body
+    const { subjectName, standard, division } = req.body;
+
+    // Debugging: Log the request body
+    console.log('Request body:', req.body);
+
+    // Validate required parameters
+    if (!subjectName || !standard || !division) {
+      console.log('Missing required parameters');
+      return res.status(400).json({ error: 'Missing required parameters' });
+    }
+
+    // Define the SQL query for homework_pending
+    const sqlHomework = `
+      SELECT 
+        h.hid,
+        h.homeworkp_id,
+        h.subject_id,
+        h.date_of_given,
+        h.description,
+        h.image,
+        s.subject_name,
+        h.standred,
+        h.Division,
+        t.tname AS teacher_name,
+        h.date_of_creation 
+      FROM 
+        MGVP.homework_pending h
+      JOIN 
+        colleges.Subject s ON h.subject_id = s.subject_code_prefixed
+      JOIN
+        MGVP.teacher t ON h.teacher_id = t.teacher_code
+        LEFT JOIN
+        MGVP.homework_submitted hs ON h.homeworkp_id = hs.homeworkpending_id
+      WHERE 
+        s.subject_name = ? AND h.standred = ? AND h.Division = ?AND hs.homeworkpending_id IS NULL`;
+
+    // Execute the SQL query asynchronously using pool promise
+    const [rowsHomework] = await pool.query(sqlHomework, [subjectName, standard, division]);
+
+    // Debugging: Log the query result
+    console.log('Query result:', rowsHomework);
+
+    // Convert images to base64
+    const rowsWithBase64ImageHomework = rowsHomework.map(row => ({
+      ...row,
+      image: row.image ? row.image.toString('base64') : null
+    }));
+
+    // Return the homework_pending data with base64 images as JSON response
+    res.json(rowsWithBase64ImageHomework);
+  } catch (error) {
+    console.error('Error fetching homework_pending data:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+    
 // Start the server
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
