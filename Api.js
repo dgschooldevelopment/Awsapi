@@ -194,13 +194,13 @@ const sql = `SELECT subject_code, subject_name, stand, division, subject_code_pr
 });
 
 
-app.post('/homework_pending', async (req, res) => {
+app.get('/homework_pending', async (req, res) => {
   try {
-    // Extract parameters from the request body
-    const { subjectName, standard, division } = req.body;
+    // Extract parameters from the query string
+    const { subjectName, standard, division } = req.query;
 
-    // Debugging: Log the request body
-    console.log('Request body:', req.body);
+    // Debugging: Log the request query
+    console.log('Request query:', req.query);
 
     // Validate required parameters
     if (!subjectName || !standard || !division) {
@@ -228,10 +228,10 @@ app.post('/homework_pending', async (req, res) => {
         colleges.Subject s ON h.subject_id = s.subject_code_prefixed
       JOIN
         MGVP.teacher t ON h.teacher_id = t.teacher_code
-        LEFT JOIN
+      LEFT JOIN
         MGVP.homework_submitted hs ON h.homeworkp_id = hs.homeworkpending_id
       WHERE 
-        s.subject_name = ? AND h.standred = ? AND h.Division = ?AND hs.homeworkpending_id IS NULL`;
+        s.subject_name = ? AND h.standred = ? AND h.Division = ? AND hs.homeworkpending_id IS NULL`;
 
     // Execute the SQL query asynchronously using pool promise
     const [rowsHomework] = await pool.query(sqlHomework, [subjectName, standard, division]);
