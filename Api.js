@@ -265,29 +265,31 @@ app.get('/submitted_homework', async (req, res) => {
     }
 
     // Fetch the submitted homework details for the given student and subject
-    const [rows] = await pool.query(`
-      SELECT 
-          hs.submitted_id,
-          hs.homeworksubmitted_id,
-          hs.homeworkpending_id,
-          hs.subject_id,
-          hs.student_id AS studentid,
-          hs.date_of_given_submitted,
-          hs.description AS submitted_description,
-          hs.image,
-          hp.date_of_given AS date_of_to_submit,
-          hp.description AS pending_description,
-          s.subject_name
-      FROM 
-          ${collegeName}.homework_submitted hs
-      JOIN 
-          ${collegeName}.homework_pending hp ON hs.homeworkpending_id = hp.homeworkp_id
-      JOIN 
-          Subject s ON hs.subject_id = s.subject_code_prefixed
-      WHERE 
-          hs.student_id = ? AND
-          s.subject_name = ?
-    `, [student_id, subject_name]);
+   // Fetch the submitted homework details for the given student and subject
+const [rows] = await pool.query(`
+  SELECT 
+      hs.submitted_id,
+      hs.homeworksubmitted_id,
+      hs.homeworkpending_id,
+      hs.subject_id,
+      hs.student_id AS studentid,
+      hs.date_of_given_submitted,
+      hs.description AS submitted_description,
+      hs.image,
+      hp.date_of_given AS date_of_to_submit,
+      hp.description AS pending_description,
+      s.subject_name
+  FROM 
+      ${collegeName}.homework_submitted hs
+  JOIN 
+      ${collegeName}.homework_pending hp ON hs.homeworkpending_id = hp.homeworkp_id
+  JOIN 
+      ${databasecollege}.Subject s ON hs.subject_id = s.subject_code_prefixed
+  WHERE 
+      hs.student_id = ? AND
+      s.subject_name = ?
+`, [student_id, subject_name]);
+
 
     // Convert image to base64 format
     const rowsWithBase64Image = rows.map(row => ({
