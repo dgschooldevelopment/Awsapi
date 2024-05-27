@@ -253,6 +253,7 @@ app.get('/homework_pending', async (req, res) => {
   }
 });
 ///////////////////////////////////////////////////////////////////////////////
+// Route to fetch submitted homework
 app.get('/submitted_homework', async (req, res) => {
   try {
     // Extract parameters from the query string
