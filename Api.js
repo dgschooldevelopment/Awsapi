@@ -255,56 +255,65 @@ app.get('/homework_pending', async (req, res) => {
 ///////////////////////////////////////////////////////////////////////////////
 // Route to fetch submitted homework
 app.get('/submitted_homework', async (req, res) => {
-  try {
-    // Extract parameters from the query string
-    const { student_id, subject_name } = req.query;
+  const { studentId, subjectName } = req.query;
 
-    // Validate required parameters
-    if (!student_id || !subject_name) {
-      return res.status(400).json({ error: 'Missing required parameters' });
+  const sqlQuery = `
+    SELECT
+        hs.submitted_id,
+        hs.homeworksubmitted_id,
+        hs.homeworkpending_id,
+        hs.subject_id,
+        hs.student_id AS studentid,
+        hs.date_of_given_submitted,
+        hs.description AS submitted_description,
+        hp.date_of_given AS date_of_to_submit,
+        hp.description AS pending_description,
+        s.subject_name,
+        REPLACE(REPLACE(TO_BASE64(isub.image), '\\\\', ''), '\\n', '') AS image_base64
+    FROM
+        MGVP.homework_submitted hs
+    JOIN
+        MGVP.homework_pending hp ON hs.homeworkpending_id = hp.homeworkp_id
+    JOIN
+        colleges.Subject s ON hs.subject_id = s.subject_code_prefixed
+    JOIN
+        MGVP.image_submitted isub ON hs.homeworksubmitted_id = isub.homeworksubmitted_id
+    WHERE
+        hs.student_id = ? AND
+        s.subject_name = ?`;
+
+  try {
+    const [results] = await pool.query(sqlQuery, [studentId, subjectName]);
+
+    if (results.length === 0) {
+      return res.status(404).json({ error: 'No data found' });
     }
 
-    // Fetch the submitted homework details for the given student and subject
-   // Fetch the submitted homework details for the given student and subject
-const [rows] = await pool.query(`
-  SELECT 
-      hs.submitted_id,
-      hs.homeworksubmitted_id,
-      hs.homeworkpending_id,
-      hs.subject_id,
-      hs.student_id AS studentid,
-      hs.date_of_given_submitted,
-      hs.description AS submitted_description,
-      hs.image,
-      hp.date_of_given AS date_of_to_submit,
-      hp.description AS pending_description,
-      s.subject_name
-  FROM 
-      ${collegeName}.homework_submitted hs
-  JOIN 
-      ${collegeName}.homework_pending hp ON hs.homeworkpending_id = hp.homeworkp_id
-  JOIN 
-      ${databasecollege}.Subject s ON hs.subject_id = s.subject_code_prefixed
-  WHERE 
-      hs.student_id = ? AND
-      s.subject_name = ?
-`, [student_id, subject_name]);
+    const images = {};
+    results.forEach((row, index) => {
+      images[`image${index + 1}`] = row.image_base64;
+    });
 
+    const response = {
+      submitted_id: results[0].submitted_id,
+      homeworksubmitted_id: results[0].homeworksubmitted_id,
+      homeworkpending_id: results[0].homeworkpending_id,
+      subject_id: results[0].subject_id,
+      studentid: results[0].studentid,
+      date_of_given_submitted: results[0].date_of_given_submitted,
+      submitted_description: results[0].submitted_description,
+      date_of_to_submit: results[0].date_of_to_submit,
+      pending_description: results[0].pending_description,
+      subject_name: results[0].subject_name,
+      images: images
+    };
 
-    // Convert image to base64 format
-    const rowsWithBase64Image = rows.map(row => ({
-      ...row,
-      image: row.image ? row.image.toString('base64') : null
-    }));
-
-    res.json(rowsWithBase64Image);
+    res.json(response);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    console.error('Database query failed:', error);
+    res.status(500).json({ error: 'Database query failed' });
   }
 });
-
-    
 // Start the server
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
