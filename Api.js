@@ -379,7 +379,8 @@ app.get('/homework_submitted', async (req, res) => {
 });
 
 /////////////////////////////////////////////////////////////
-app.get('/evolution-homework', async (req, res) => {
+
+     app.get('/evolution-homework', async (req, res) => {
   const { subject_name, standred, division, student_id } = req.query;
 
   // Log received query parameters for debugging
@@ -391,7 +392,7 @@ app.get('/evolution-homework', async (req, res) => {
 
   // Queries
   const queries = {
-    totalHomework: `
+   totalHomework: `
       SELECT COUNT(*) as count
       FROM MGVP.homework_pending hp
       JOIN MGVP.homework_submitted hs ON hp.homeworkp_id = hs.homeworkpending_id
@@ -415,20 +416,20 @@ app.get('/evolution-homework', async (req, res) => {
   };
 
   const params = {
-    totalHomework: [subject_name, standred, division],
+    submittedHomework: [subject_name, standred, division],
     approvedHomework: [student_id],
     pendingHomework: [student_id]
   };
 
   try {
     // Execute all queries using async/await
-    const [submittedHomeworkResults] = await pool.query(queries. totalHomework, params. totalHomeworkk);
+    const [submittedHomeworkResults] = await pool.query(queries.submittedHomework, params.submittedHomework);
     const [approvedHomeworkResults] = await pool.query(queries.approvedHomework, params.approvedHomework);
     const [pendingHomeworkResults] = await pool.query(queries.pendingHomework, params.pendingHomework);
 
     // Combine all results into one response object
     const response = {
-       totalHomework: submittedHomeworkResults[0].count,
+      submittedHomework: submittedHomeworkResults[0].count,
       approvedHomework: approvedHomeworkResults[0].count,
       pendingHomework: pendingHomeworkResults[0].count
     };
@@ -437,7 +438,10 @@ app.get('/evolution-homework', async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
-});
+}); 
+      
+  
+  
 // Start the server
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
