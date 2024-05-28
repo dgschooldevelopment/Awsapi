@@ -395,8 +395,8 @@ app.get('/homework_submitted', async (req, res) => {
     totalHomework: `
       SELECT COUNT(*) as count
       FROM MGVP.homework_pending hp
-      JOIN MGVP.homework_submitted hs ON hp.homeworkp_id = hs.homeworkpending_id
-      JOIN colleges.Subject s ON hs.subject_id = s.subject_code_prefixed
+    
+      JOIN colleges.Subject s ON hp.subject_id = s.subject_code_prefixed
       WHERE s.subject_name = ? AND hp.standred = ? AND hp.Division = ?;
     `,
     approvedHomework: `
