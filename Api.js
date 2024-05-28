@@ -314,7 +314,7 @@ app.get('/homework_pending', async (req, res) => {
     res.status(500).json({ error: 'Database query failed' });
   }
 });*/
-app.get('/submitted_homework', async (req, res) => {
+app.get('/homework_submitted', async (req, res) => {
   const { studentId, subjectName } = req.query;
 
   const sqlQuery = `
@@ -364,10 +364,11 @@ app.get('/submitted_homework', async (req, res) => {
           date_of_to_submit: row.date_of_to_submit,
           pending_description: row.pending_description,
           subject_name: row.subject_name,
-          images: []
+          images: {}
         };
       }
-      submissions[row.submitted_id].images.push(row.image_base64);
+      const imageNumber = Object.keys(submissions[row.submitted_id].images).length + 1;
+      submissions[row.submitted_id].images[`image${imageNumber}`] = row.image_base64;
     });
 
     res.json(Object.values(submissions));
@@ -376,6 +377,7 @@ app.get('/submitted_homework', async (req, res) => {
     res.status(500).json({ error: 'Database query failed' });
   }
 });
+
 /////////////////////////////////////////////////////////////
 app.get('/evolution-homework', async (req, res) => {
   const { subject_name, standred, division, student_id } = req.query;
