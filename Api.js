@@ -315,13 +315,13 @@ app.get('/submitted_homework', async (req, res) => {
   }
 });
 /////////////////////////////////////////////////////////////
-app.get('/evalution-homework', async (req, res) => {
-  const { subject_id, standred, division, student_id } = req.query;
+app.get('/evolution-homework', async (req, res) => {
+  const { subject_name, standred, division, student_id } = req.query;
 
   // Log received query parameters for debugging
-  console.log('Received query parameters:', { subject_id, standred, division, student_id });
+  console.log('Received query parameters:', { subject_name, standred, division, student_id });
 
-  if (!subject_id || !standred || !division || !student_id) {
+  if (!subject_name || !standred || !division || !student_id) {
     return res.status(400).json({ error: 'Invalid query parameters' });
   }
 
@@ -331,24 +331,27 @@ app.get('/evalution-homework', async (req, res) => {
       SELECT COUNT(*) as count
       FROM MGVP.homework_pending hp
       JOIN MGVP.homework_submitted hs ON hp.homeworkp_id = hs.homeworkpending_id
-      WHERE hs.subject_id = ? AND hp.standred = ? AND hp.Division = ?;
+      JOIN colleges.Subject s ON hs.subject_id = s.subject_code_prefixed
+      WHERE s.subject_name = ? AND hp.standred = ? AND hp.Division = ?;
     `,
     approvedHomework: `
       SELECT COUNT(*) as count
       FROM MGVP.homework_submitted hs
       JOIN MGVP.homework_pending hp ON hp.homeworkp_id = hs.homeworkpending_id
+      JOIN colleges.Subject s ON hs.subject_id = s.subject_code_prefixed
       WHERE hs.student_id = ? AND hs.approval_status = 1;
     `,
     pendingHomework: `
       SELECT COUNT(*) as count
       FROM MGVP.homework_submitted hs
       JOIN MGVP.homework_pending hp ON hp.homeworkp_id = hs.homeworkpending_id
+      JOIN colleges.Subject s ON hs.subject_id = s.subject_code_prefixed
       WHERE hs.student_id = ? AND hs.approval_status = 0;
     `
   };
 
   const params = {
-    submittedHomework: [subject_id, standred, division],
+    submittedHomework: [subject_name, standred, division],
     approvedHomework: [student_id],
     pendingHomework: [student_id]
   };
@@ -371,7 +374,6 @@ app.get('/evalution-homework', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
-
 // Start the server
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
