@@ -475,7 +475,7 @@ app.post('/submit_homework', async (req, res) => {
     // Commit the transaction
     await connection.commit();
 
-    res.status(201).json({ message: 'Homework submitted successfully' });
+ res.status(200).json({ success: true, message: 'Homework submitted successfully' });
 
   } catch (error) {
     // Rollback the transaction if an error occurs
