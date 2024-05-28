@@ -392,7 +392,7 @@ app.get('/homework_submitted', async (req, res) => {
 
   // Queries
   const queries = {
-   totalHomework: `
+    totalHomework: `
       SELECT COUNT(*) as count
       FROM MGVP.homework_pending hp
       JOIN MGVP.homework_submitted hs ON hp.homeworkp_id = hs.homeworkpending_id
@@ -416,20 +416,20 @@ app.get('/homework_submitted', async (req, res) => {
   };
 
   const params = {
-    submittedHomework: [subject_name, standred, division],
+    totalHomework: [subject_name, standred, division],
     approvedHomework: [student_id],
     pendingHomework: [student_id]
   };
 
   try {
     // Execute all queries using async/await
-    const [submittedHomeworkResults] = await pool.query(queries.submittedHomework, params.submittedHomework);
+    const [totalHomeworkResults] = await pool.query(queries.totalHomework, params.totalHomework);
     const [approvedHomeworkResults] = await pool.query(queries.approvedHomework, params.approvedHomework);
     const [pendingHomeworkResults] = await pool.query(queries.pendingHomework, params.pendingHomework);
 
     // Combine all results into one response object
     const response = {
-      submittedHomework: submittedHomeworkResults[0].count,
+      totalHomework: totalHomeworkResults[0].count,
       approvedHomework: approvedHomeworkResults[0].count,
       pendingHomework: pendingHomeworkResults[0].count
     };
@@ -438,9 +438,8 @@ app.get('/homework_submitted', async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
-}); 
-      
-  
+});
+
   
 // Start the server
 app.listen(port, () => {
