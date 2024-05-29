@@ -14,8 +14,8 @@ const collegeName = process.env.COLLEGE_NAME;
 app.use(cors());
 app.use(express.json());
 
-app.use(bodyParser.json({ limit: '500mb' })); // Increase limit for JSON request body
-app.use(bodyParser.urlencoded({ limit: '500mb', extended: true })); // Increase limit for URL-encoded request body
+app.use(bodyParser.json({ limit: '900mb' })); // Increase limit for JSON request body
+app.use(bodyParser.urlencoded({ limit: '900mb', extended: true })); // Increase limit for URL-encoded request body
 
 // MySQL Connection Pool with proper authPlugins option
 const pool = mysql.createPool({
