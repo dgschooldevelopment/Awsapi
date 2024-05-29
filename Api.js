@@ -329,6 +329,7 @@ app.get('/homework_submitted', async (req, res) => {
         hp.date_of_given AS date_of_to_submit,
         hp.description AS pending_description,
         s.subject_name,
+         hs.approval_status,
         REPLACE(REPLACE(TO_BASE64(isub.image), '\\\\', ''), '\\n', '') AS image_base64
     FROM
         MGVP.homework_submitted hs
