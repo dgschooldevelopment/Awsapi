@@ -314,102 +314,73 @@ app.get('/homework_pending', async (req, res) => {
     res.status(500).json({ error: 'Database query failed' });
   }
 });*/
-app.get('/submitted_homework', async (req, res) => {
-    const { studentId, subjectName } = req.query;
+app.get('/homework_submitted', async (req, res) => {
+  const { studentId, subjectName } = req.query;
 
-    if (!studentId || !subjectName) {
-        return res.status(400).json({ error: 'studentId and subjectName are required parameters' });
+  const sqlQuery = `
+    SELECT
+        hs.submitted_id,
+        hs.homeworksubmitted_id,
+        hs.homeworkpending_id,
+        hs.subject_id,
+        hs.student_id AS studentid,
+        hs.date_of_given_submitted,
+        hs.description AS submitted_description,
+        hp.date_of_given AS date_of_to_submit,
+        hp.description AS pending_description,
+        s.subject_name,
+        REPLACE(REPLACE(TO_BASE64(isub.image), '\\\\', ''), '\\n', '') AS image_base64,
+        hs.approval_status  -- Add approval_status field here
+
+    FROM
+        MGVP.homework_submitted hs
+    JOIN
+        MGVP.homework_pending hp ON hs.homeworkpending_id = hp.homeworkp_id
+    JOIN
+        colleges.Subject s ON hs.subject_id = s.subject_code_prefixed
+    JOIN
+        MGVP.image_submitted isub ON hs.homeworksubmitted_id = isub.homeworksubmitted_id
+    WHERE
+        hs.student_id = ? AND
+        s.subject_name = ?`;
+
+  try {
+    const [results] = await pool.query(sqlQuery, [studentId, subjectName]);
+
+    if (results.length === 0) {
+      return res.status(404).json({ error: 'No data found' });
     }
 
-    // Create a database connection
-    const collegePool = mysql.createPool({
-        host: 'your_host',
-        user: 'your_username',
-        password: 'your_password',
-        database: 'your_database',
-        connectionLimit: 10 // Adjust according to your requirements
+    const submissions = {};
+
+    results.forEach(row => {
+      if (!submissions[row.submitted_id]) {
+        submissions[row.submitted_id] = {
+          submitted_id: row.submitted_id,
+          homeworksubmitted_id: row.homeworksubmitted_id,
+          homeworkpending_id: row.homeworkpending_id,
+          subject_id: row.subject_id,
+          studentid: row.studentid,
+          date_of_given_submitted: row.date_of_given_submitted,
+          submitted_description: row.submitted_description,
+          date_of_to_submit: row.date_of_to_submit,
+          pending_description: row.pending_description,
+          subject_name: row.subject_name,
+          approval_status: row.approval_status, // Include approval_status here
+          images: {}
+        };
+      }
+      const imageNumber = Object.keys(submissions[row.submitted_id].images).length + 1;
+      submissions[row.submitted_id].images[`image${imageNumber}`] = row.image_base64;
     });
 
-    const sqlQuery = `
-        SELECT
-            hs.submitted_id,
-            hs.homeworksubmitted_id,
-            hs.homeworkpending_id,
-            hs.subject_id,
-            hs.student_id AS studentid,
-            st.student_name, -- Include student name
-            hs.date_of_given_submitted,
-            hs.description AS submitted_description,
-            hp.date_of_given AS date_of_to_submit,
-            hp.description AS pending_description,
-            s.subject_name,
-            hs.approval_status,
-            REPLACE(REPLACE(TO_BASE64(isub.image), '\\\\', ''), '\\n', '') AS image_base64
-        FROM
-           homework_submitted hs
-        JOIN
-          homework_pending hp ON hs.homeworkpending_id = hp.homeworkp_id
-        JOIN
-            your_database.Subject s ON hs.subject_id = s.subject_code_prefixed
-        JOIN
-           image_submitted isub ON hs.homeworksubmitted_id = isub.homeworksubmitted_id
-        JOIN
-           Students st ON hs.student_id = st.student_id -- Join with Students table to get student name
-        WHERE
-            hs.student_id = ? AND
-            s.subject_name = ?
-    `;
-
-    try {
-        collegePool.getConnection((err, connection) => {
-            if (err) {
-                console.error('Error connecting to database:', err);
-                return res.status(500).json({ error: 'Failed to connect to database' });
-            }
-
-            connection.query(sqlQuery, [studentId, subjectName], (error, results) => {
-                connection.release(); // Release the connection
-
-                if (error) {
-                    console.error('Database query failed:', error);
-                    return res.status(500).json({ error: 'Database query failed' });
-                }
-
-                if (results.length === 0) {
-                    return res.status(404).json({ error: 'No data found' });
-                }
-
-                const submissions = {};
-
-                results.forEach(row => {
-                    if (!submissions[row.submitted_id]) {
-                        submissions[row.submitted_id] = {
-                            submitted_id: row.submitted_id,
-                            homeworksubmitted_id: row.homeworksubmitted_id,
-                            homeworkpending_id: row.homeworkpending_id,
-                            subject_id: row.subject_id,
-                            studentid: row.studentid,
-                            student_name: row.student_name, // Include student name
-                            date_of_given_submitted: row.date_of_given_submitted,
-                            submitted_description: row.submitted_description,
-                            date_of_to_submit: row.date_of_to_submit,
-                            pending_description: row.pending_description,
-                            approval_status: row.approval_status,
-                            subject_name: row.subject_name,
-                            images: []
-                        };
-                    }
-                    submissions[row.submitted_id].images.push(`{${row.image_base64}}`);
-                });
-
-                res.json(Object.values(submissions));
-            });
-        });
-    } catch (error) {
-        console.error('Error:', error);
-        res.status(500).json({ error: 'Internal Server Error' });
-    }
+    res.json(Object.values(submissions));
+  } catch (error) {
+    console.error('Database query failed:', error);
+    res.status(500).json({ error: 'Database query failed' });
+  }
 });
+
 /////////////////////////////////////////////////////////////
 
      app.get('/evolution-homework', async (req, res) => {
