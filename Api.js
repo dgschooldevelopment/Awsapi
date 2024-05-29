@@ -14,8 +14,8 @@ const collegeName = process.env.COLLEGE_NAME;
 app.use(cors());
 app.use(express.json());
 
-app.use(bodyParser.json({ limit: '10mb' }));
-app.use(bodyParser.urlencoded({ limit: '10mb', extended: true }));
+app.use(bodyParser.json({ limit: '50mb' }));
+app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
 // MySQL Connection Pool with proper authPlugins option
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
