@@ -406,10 +406,10 @@ app.get('/homework_submitted', async (req, res) => {
         FROM
             MGVP.homework_submitted hs
         JOIN
-           MGVP.homework_pending hp ON hs.homeworkpending_id = hp.homeworkp_id
+            MGVP.homework_pending hp ON hs.homeworkpending_id = hp.homeworkp_id
         JOIN
-            Subject s ON hs.subject_id = s.subject_code_prefixed
-        JOIN
+            ${databasecollege}.Subject s ON hs.subject_id = s.subject_code_prefixed
+        LEFT JOIN
             MGVP.image_submit isub ON hs.submitted_id = isub.homeworksubmitted_id
         WHERE
             hs.student_id = ? AND
@@ -417,7 +417,7 @@ app.get('/homework_submitted', async (req, res) => {
     `;
 
     try {
-        const [results] = await pool.query(sqlQuery, [studentId, subjectName]);
+        const results = await query(sqlQuery, [studentId, subjectName]);
 
         if (results.length === 0) {
             return res.status(404).json({ error: 'No data found' });
@@ -437,12 +437,15 @@ app.get('/homework_submitted', async (req, res) => {
                     submitted_description: row.submitted_description,
                     date_of_to_submit: row.date_of_to_submit,
                     pending_description: row.pending_description,
-                    approval_status: row.approval_status,
                     subject_name: row.subject_name,
+                    approval_status: row.approval_status,
                     images: []
                 };
             }
-            submissions[row.submitted_id].images.push(`{${row.image_data }}`);
+
+            if (row.image_data) {
+                submissions[row.submitted_id].images.push(({ row.image_data } ));
+            }
         });
 
         res.json(Object.values(submissions));
@@ -451,6 +454,7 @@ app.get('/homework_submitted', async (req, res) => {
         res.status(500).json({ error: 'Database query failed' });
     }
 });
+
 
 /////////////////////////////////////////////////////////////
 
