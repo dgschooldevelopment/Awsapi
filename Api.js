@@ -314,7 +314,7 @@ app.get('/homework_pending', async (req, res) => {
     res.status(500).json({ error: 'Database query failed' });
   }
 });*/
-app.get('/homework_submitted', async (req, res) => {
+app.get('/submitted_homework', async (req, res) => {
     const { studentId, subjectName } = req.query;
 
     if (!studentId || !subjectName) {
