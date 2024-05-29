@@ -385,7 +385,7 @@ app.get('/homework_submitted', async (req, res) => {
 
 /////////////////////////////////////////////////////////////
 
-     app.get('/evolution-homework', async (req, res) => {
+    /* app.get('/evolution-homework', async (req, res) => {
   const { subject_name, standred, division, student_id } = req.query;
 
   // Log received query parameters for debugging
@@ -434,6 +434,82 @@ app.get('/homework_submitted', async (req, res) => {
 
     // Combine all results into one response object
     const response = {
+      totalHomework: totalHomeworkResults[0].count,
+      approvedHomework: approvedHomeworkResults[0].count,
+      pendingHomework: pendingHomeworkResults[0].count
+    };
+
+    res.json(response);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});*/
+app.get('/evolution-homework', async (req, res) => {
+  const { subject_name, standred, division, student_id } = req.query;
+
+  // Log received query parameters for debugging
+  console.log('Received query parameters:', { subject_name, standred, division, student_id });
+
+  if (!subject_name || !standred || !division || !student_id) {
+    return res.status(400).json({ error: 'Invalid query parameters' });
+  }
+
+  // Queries
+  const studentNameQuery = `
+    SELECT Name
+    FROM ${collegeName}.Student
+    WHERE studentid = ?;
+  `;
+
+  const queries = {
+    totalHomework: `
+      SELECT COUNT(*) as count
+      FROM MGVP.homework_pending hp
+      JOIN colleges.Subject s ON hp.subject_id = s.subject_code_prefixed
+      WHERE s.subject_name = ? AND hp.standred = ? AND hp.Division = ?;
+    `,
+    approvedHomework: `
+      SELECT COUNT(*) as count
+      FROM MGVP.homework_submitted hs
+      JOIN MGVP.homework_pending hp ON hp.homeworkp_id = hs.homeworkpending_id
+      JOIN colleges.Subject s ON hs.subject_id = s.subject_code_prefixed
+      WHERE hs.student_id = ? AND hs.approval_status = 1;
+    `,
+    pendingHomework: `
+      SELECT COUNT(*) as count
+      FROM MGVP.homework_submitted hs
+      JOIN MGVP.homework_pending hp ON hp.homeworkp_id = hs.homeworkpending_id
+      JOIN colleges.Subject s ON hs.subject_id = s.subject_code_prefixed
+      WHERE hs.student_id = ? AND hs.approval_status = 0;
+    `
+  };
+
+  const params = {
+    studentName: [student_id],
+    totalHomework: [subject_name, standred, division],
+    approvedHomework: [student_id],
+    pendingHomework: [student_id]
+  };
+
+  try {
+    // Execute all queries using async/await
+    const [studentNameResults] = await pool.query(studentNameQuery, params.studentName);
+
+    // Log studentNameResults for debugging
+    console.log('Student Name Results:', studentNameResults);
+
+    if (!studentNameResults || studentNameResults.length === 0) {
+      return res.status(404).json({ error: 'Student not found' });
+    }
+
+    const studentName = studentNameResults[0].Name; // Adjusted to 'Name' instead of 'student_name'
+    const [totalHomeworkResults] = await pool.query(queries.totalHomework, params.totalHomework);
+    const [approvedHomeworkResults] = await pool.query(queries.approvedHomework, params.approvedHomework);
+    const [pendingHomeworkResults] = await pool.query(queries.pendingHomework, params.pendingHomework);
+
+    // Combine all results into one response object
+    const response = {
+      student_name: studentName,
       totalHomework: totalHomeworkResults[0].count,
       approvedHomework: approvedHomeworkResults[0].count,
       pendingHomework: pendingHomeworkResults[0].count
