@@ -331,7 +331,7 @@ app.get('/homework_submitted', async (req, res) => {
         hp.date_of_given AS date_of_to_submit,
         hp.description AS pending_description,
         s.subject_name,
-        REPLACE(REPLACE(TO_BASE64(isub.image), '\\\\', ''), '\\n', '') AS image_base64,
+         REPLACE(REPLACE(TO_BASE64(isub.image), '\\\\', ''), '\\n', '') AS image_base64,
         hs.approval_status  -- Add approval_status field here
 
     FROM
@@ -341,7 +341,7 @@ app.get('/homework_submitted', async (req, res) => {
     JOIN
         colleges.Subject s ON hs.subject_id = s.subject_code_prefixed
     JOIN
-        MGVP.image_submitted isub ON hs.homeworksubmitted_id = isub.homeworksubmitted_id
+        MGVP.image_submit isub ON hs.submitted_id = isub.homeworksubmitted_id
     WHERE
         hs.student_id = ? AND
         s.subject_name = ?`;
