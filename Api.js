@@ -444,7 +444,7 @@ app.get('/homework_submitted', async (req, res) => {
             }
 
             if (row.image_data) {
-                submissions[row.submitted_id].images.push(({ row.image_data } ));
+                submissions[row.submitted_id].images.push(row.image_data);
             }
         });
 
