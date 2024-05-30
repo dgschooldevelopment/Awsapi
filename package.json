@@ -1,18 +1,12 @@
-{
+
+  {
   "name": "backendapi",
   "version": "1.0.0",
   "description": "",
   "main": "Api.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-<<<<<<< HEAD
-          "start": "node Api.js"
-   
-=======
-   
     "start": "node Api.js"
-
->>>>>>> 6fd6faab8679f04e52e08f69034955f84302d35f
   },
   "keywords": [],
   "author": "",
@@ -25,3 +19,4 @@
     "mysql2": "^3.9.7"
   }
 }
+
