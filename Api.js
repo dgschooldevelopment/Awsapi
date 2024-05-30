@@ -438,17 +438,12 @@ app.get('/homework_submitted', async (req, res) => {
                     pending_description: row.pending_description,
                     subject_name: row.subject_name,
                     approval_status: row.approval_status,
-                    images: []
-                };
+                    images: { 
+                    }                };
             }
 
-        if (row.image_data) {
-                // Determine the current number of images
-                const imageNumber = Object.keys(submissions[row.submitted_id].images).length + 1;
-
-                // Add the image with a numbered key
-                submissions[row.submitted_id].images[`image${imageNumber}`] = row.image_data;
-            }
+      if (row.image_data) {
+                 submissions[row.submitted_id].images.push(`${row.image_data}`);
 
         });
 
