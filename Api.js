@@ -41,11 +41,17 @@ const query = async (sql, params) => {
   }
 };
 
+const syllabusPool = mysql.createPool({
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.SYLLABUS_DB_NAME,
+});
+
 // Function to convert buffer to Base64
 function bufferToBase64(buffer) {
   return Buffer.from(buffer).toString('base64');
 }
-
 // Route to check college code
 app.post('/check', async (req, res) => {
   try {
@@ -642,7 +648,111 @@ app.post('/submit_homework', async (req, res) => {
     if (connection) connection.release();
   }
 });
-  
+  app.post('/feedback', async (req, res) => {
+    const { teacher_name, your_name, subject, explanation } = req.body;
+
+    if (!teacher_name || !your_name || !subject || !explanation) {
+        return res.status(400).json({ error: 'All fields are required' });
+    }
+
+    const collegePool = await createCollegePool();
+
+    try {
+        const sql = 'INSERT INTO Feedback (teacher_name, your_name, subject, explanation) VALUES (?, ?, ?, ?)';
+        const values = [teacher_name, your_name, subject, explanation];
+
+        // Execute the insert query
+        await collegePool.query(sql, values);
+
+        console.log('Feedback inserted successfully');
+        res.status(201).json({ success: true, message: 'Feedback added successfully' });
+    } catch (err) {
+        console.error('Error inserting feedback:', err);
+        res.status(500).json({ success: false, error: 'Failed to insert feedback' });
+    } finally {
+        collegePool.end();
+    }
+});
+
+
+app.get('/chaptercontent', async (req, res) => {
+  const { chapterId } = req.query;
+
+  if (!chapterId) {
+    return res.status(400).json({ error: 'chapterId parameter is required' });
+  }
+
+  try {
+    // Define the SQL query to select chapter content data based on chapter ID
+    const sql = `SELECT content_id, content_type, content FROM ${databasecollege}.ChapterContents WHERE chapter_id = ?`;
+
+    // Execute the query with the chapter ID parameter
+    const [contents] = await syllabusPool.query(sql, [chapterId]);
+
+    // Map the results to format the response data
+    const contentData = contents.map(content => ({
+      content_id: content.content_id,
+      content_type: content.content_type,
+      content: content.content
+    }));
+
+    // Return the chapter content data as JSON response
+    res.json(contentData);
+  } catch (err) {
+    console.error('Error fetching chapter content data:', err);
+    res.status(500).json({ error: 'Error fetching chapter content data' });
+  } finally {
+    syllabusPool.end();
+  }
+});
+
+// Route to fetch chapter content and points based on chapter ID
+app.get('/chaptercontaint', async (req, res) => {
+  const { chapterId } = req.query;
+
+  if (!chapterId) {
+    return res.status(400).json({ error: 'Chapter ID is required' });
+  }
+
+  try {
+    // Define the SQL query to select chapter and points data based on chapter ID
+    const query = `
+      SELECT 
+        c.chapter_name,
+        p.point_id,
+        p.point_name,
+        p.point_text,
+        p.point_image
+      FROM 
+        chapter c
+      JOIN Points p ON c.chapter_id = p.chapter_id
+      WHERE 
+        c.chapter_id = ?;
+    `;
+
+    // Execute the query using the pool
+    const [rows] = await syllabusPool.query(query, [chapterId]);
+
+    // Prepare response object
+    const chapterDetails = {
+      chapter_id: chapterId,
+      points: rows.map(row => ({
+        point_id: row.point_id,
+        point_name: row.point_name,
+        point_text: row.point_text,
+        point_image: row.point_image ? row.point_image.toString('base64') : null
+      }))
+    };
+
+    res.json(chapterDetails);
+  } catch (err) {
+    console.error('Error executing MySQL query:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    syllabusPool.end();
+  }
+});
+
 // Start the server
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
