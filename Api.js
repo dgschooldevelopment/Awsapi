@@ -674,37 +674,36 @@ app.post('/submit_homework', async (req, res) => {
     }
 });
 
+app.get('/chapters', async (req, res) => {
+  const { subjectCode } = req.query;
 
-app.get('/chaptercontent', async (req, res) => {
-  const { chapterId } = req.query;
-
-  if (!chapterId) {
-    return res.status(400).json({ error: 'chapterId parameter is required' });
+  if (!subjectCode) {
+    return res.status(400).json({ error: 'subjectCode parameter is required' });
   }
 
   try {
-    // Define the SQL query to select chapter content data based on chapter ID
-    const sql = `SELECT content_id, content_type, content FROM ${databasecollege}.ChapterContents WHERE chapter_id = ?`;
+    // Define the SQL query to select chapter data based on subject code
+    const sql = `SELECT chapter_id, chapter_name FROM ${databasecollege}.Chapters WHERE subject_code = ?`;
 
-    // Execute the query with the chapter ID parameter
-    const [contents] = await syllabusPool.query(sql, [chapterId]);
+    // Execute the query with the subject code parameter
+    const [chapters] = await syllabusPool.query(sql, [subjectCode]);
 
     // Map the results to format the response data
-    const contentData = contents.map(content => ({
-      content_id: content.content_id,
-      content_type: content.content_type,
-      content: content.content
+    const chapterData = chapters.map(chapter => ({
+      chapter_id: chapter.chapter_id,
+      chapter_name: chapter.chapter_name,
     }));
 
-    // Return the chapter content data as JSON response
-    res.json(contentData);
+    // Return the chapter data as JSON response
+    res.json(chapterData);
   } catch (err) {
-    console.error('Error fetching chapter content data:', err);
-    res.status(500).json({ error: 'Error fetching chapter content data' });
+    console.error('Error fetching chapter data:', err);
+    res.status(500).json({ error: 'Error fetching chapter data' });
   } finally {
     syllabusPool.end();
   }
 });
+
 
 // Route to fetch chapter content and points based on chapter ID
 app.get('/chaptercontaint', async (req, res) => {
