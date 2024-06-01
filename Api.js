@@ -683,7 +683,9 @@ app.get('/chapters', async (req, res) => {
 
   try {
     // Define the SQL query to select chapter data based on subject code
-    const sql = `SELECT chapter_id, chapter_name FROM ${databasecollege}.Chapters WHERE subject_code = ?`;
+    const sql = `SELECT chapter_id, chapter_name FROM chapter
+    INNER JOIN
+        colleges.Subject s ON chapter.subject_code_prefixed = s.subject_code_prefixed WHERE subject_code_prefixed  = ?`;
 
     // Execute the query with the subject code parameter
     const [chapters] = await syllabusPool.query(sql, [subjectCode]);
