@@ -48,6 +48,7 @@ const syllabusPool = mysql.createPool({
   database: process.env.SYLLABUS_DB_NAME,
 });
 
+
 // Function to convert buffer to Base64
 function bufferToBase64(buffer) {
   return Buffer.from(buffer).toString('base64');
