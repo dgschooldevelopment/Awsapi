@@ -35,6 +35,7 @@ const query = async (sql, params) => {
   } finally {
     connection.release();
   }
+}
 const syllabusPool = mysql.createPool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
