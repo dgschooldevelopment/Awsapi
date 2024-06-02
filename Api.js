@@ -1,22 +1,18 @@
 const express = require('express');
-const mysql = require('mysql2/promise'); // Use mysql2/promise instead of mysql2
+const mysql = require('mysql2/promise');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 require('dotenv').config();
-const fs = require('fs');
-const path = require('path');
 const app = express();
 const port = process.env.PORT || 4000;
-const databasecollege = process.env.DATABASE_COLLEGE;
-const collegeName = process.env.COLLEGE_NAME;
 
 // Middleware
 app.use(cors());
 app.use(express.json({ limit: '300mb' }));
-app.use(bodyParser.json({ limit: '300mb' })); // Increase limit for JSON request body
-app.use(bodyParser.urlencoded({ limit: '300mb', extended: true })); // Increase limit for URL-encoded request body
+app.use(bodyParser.json({ limit: '300mb' }));
+app.use(bodyParser.urlencoded({ limit: '300mb', extended: true }));
 
-// MySQL Connection Pool with proper authPlugins option
+// MySQL Connection Pool
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
@@ -28,26 +24,12 @@ const pool = mysql.createPool({
   }
 });
 
-// Custom query function to execute SQL queries
-const query = async (sql, params) => {
-  const connection = await pool.getConnection();
-  try {
-    const [rows, fields] = await connection.query(sql, params);
-    return rows;
-  } catch (error) {
-    throw error;
-  } finally {
-    connection.release();
-  }
-};
-
 const syllabusPool = mysql.createPool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.SYLLABUS_DB_NAME,
 });
-
 
 // Function to convert buffer to Base64
 function bufferToBase64(buffer) {
@@ -675,82 +657,74 @@ app.post('/submit_homework', async (req, res) => {
     }
 });
 app.get('/chapters', async (req, res) => {
-    const { subjectCode } = req.query;
-  
-    if (!subjectCode) {
-      return res.status(400).json({ error: 'subjectCode parameter is required' });
-    }
-  
-    try {
-      // Define the SQL query to select chapter data based on subject code
-      const sql = `SELECT chapter_id, chapter_name FROM chapter
-      INNER JOIN
-          colleges.Subject s ON chapter.subject_code_prefixed = s.subject_code_prefixed WHERE s.subject_code_prefixed  = ?`;
-  
-      // Execute the query with the subject code parameter
-      const [chapters] = await syllabusPool.query(sql, [subjectCode]);
-  
-      // Map the results to format the response data
-      const chapterData = chapters.map(chapter => ({
-        chapter_id: chapter.chapter_id,
-        chapter_name: chapter.chapter_name,
-      }));
-  
-      // Return the chapter data as JSON response
-      res.json(chapterData);
-    } catch (err) {
-      console.error('Error fetching chapter data:', err);
-      res.status(500).json({ error: 'Error fetching chapter data' });
-    } finally {
-      syllabusPool.end();
-    }
-  });
-  
-  
-  // Route to fetch chapter content and points based on chapter ID
- app.get('/chaptercontaint', async (req, res) => {
-    const { chapterId } = req.query;
-  
-    if (!chapterId) {
-      return res.status(400).json({ error: 'Chapter ID is required' });
-    }
-  
-    try {
-      // Define the SQL query to select chapter and points data based on chapter ID
-      const query = `
-        SELECT 
-          c.chapter_name,
-          p.point_id,
-          p.point_name,
-          p.point_text,
-          p.point_image
-        FROM 
-          chapter c
-        JOIN Points p ON c.chapter_id = p.chapter_id
-        WHERE 
-          c.chapter_id = ?;
-      `;
-  
-      // Execute the query using the pool
-      const [rows] = await syllabusPool.query(query, [chapterId]);
-  
-      // Prepare response object
-      const chapterDetails = {
-        chapter_id: chapterId,
-        points: rows.map(row => ({
-          point_id: row.point_id,
-          point_name: row.point_name,
-          point_text: row.point_text,
-          point_image: row.point_image ? row.point_image.toString('base64') : null
-        }))
-      };
-  
-      res.json(chapterDetails);
-    } catch (err) {
-      console.error('Error executing MySQL query:', err);
-      res.status(500).json({ error: 'Internal server error' });
-    }
-  });
+  const { subjectCode } = req.query;
+
+  if (!subjectCode) {
+    return res.status(400).json({ error: 'subjectCode parameter is required' });
+  }
+
+  try {
+    const sql = `
+      SELECT chapter_id, chapter_name 
+      FROM chapter
+      INNER JOIN colleges.Subject s ON chapter.subject_code_prefixed = s.subject_code_prefixed 
+      WHERE s.subject_code_prefixed = ?;
+    `;
+
+    const [chapters] = await syllabusPool.query(sql, [subjectCode]);
+
+    const chapterData = chapters.map(chapter => ({
+      chapter_id: chapter.chapter_id,
+      chapter_name: chapter.chapter_name,
+    }));
+
+    res.json(chapterData);
+  } catch (err) {
+    console.error('Error fetching chapter data:', err);
+    res.status(500).json({ error: 'Error fetching chapter data' });
+  }
+});
+
+app.get('/chaptercontaint', async (req, res) => {
+  const { chapterId } = req.query;
+
+  if (!chapterId) {
+    return res.status(400).json({ error: 'Chapter ID is required' });
+  }
+
+  try {
+    const query = `
+      SELECT 
+        c.chapter_name,
+        p.point_id,
+        p.point_name,
+        p.point_text,
+        p.point_image
+      FROM 
+        chapter c
+      JOIN Points p ON c.chapter_id = p.chapter_id
+      WHERE 
+        c.chapter_id = ?;
+    `;
+
+    const [rows] = await syllabusPool.query(query, [chapterId]);
+
+    const chapterDetails = {
+      chapter_id: chapterId,
+      points: rows.map(row => ({
+        point_id: row.point_id,
+        point_name: row.point_name,
+        point_text: row.point_text,
+        point_image: row.point_image ? row.point_image.toString('base64') : null
+      }))
+    };
+
+    res.json(chapterDetails);
+  } catch (err) {
+    console.error('Error executing MySQL query:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 // Start the server
 app.listen(port, () => {
