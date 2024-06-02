@@ -5,6 +5,8 @@ const bodyParser = require('body-parser');
 require('dotenv').config();
 const app = express();
 const port = process.env.PORT || 4000;
+const databasecollege = process.env.DATABASE_COLLEGE;
+const collegeName = process.env.COLLEGE_NAME;
 
 // Middleware
 app.use(cors());
