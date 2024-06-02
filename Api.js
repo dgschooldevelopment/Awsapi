@@ -708,7 +708,7 @@ app.get('/chapters', async (req, res) => {
   
   
   // Route to fetch chapter content and points based on chapter ID
-  app.get('/chaptercontaint', async (req, res) => {
+ app.get('/chaptercontaint', async (req, res) => {
     const { chapterId } = req.query;
   
     if (!chapterId) {
