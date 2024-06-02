@@ -25,7 +25,16 @@ const pool = mysql.createPool({
     mysql_clear_password: () => () => Buffer.from(process.env.DB_PASSWORD + '\0')
   }
 });
-
+const query = async (sql, params) => {
+  const connection = await pool.getConnection();
+  try {
+    const [rows, fields] = await connection.query(sql, params);
+    return rows;
+  } catch (error) {
+    throw error;
+  } finally {
+    connection.release();
+  }
 const syllabusPool = mysql.createPool({
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
