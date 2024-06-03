@@ -179,11 +179,11 @@ const sql = `SELECT subject_code, subject_name, stand, division, subject_code_pr
 
     // Map the results to format the response data
     const subjectData = rows.map(subject => ({
-      subject_code: subject.subject_code,
+      subjectcode: subject.subject_code,
       subject_name: subject.subject_name,
       stand: subject.stand,
       division: subject.division,
-      subject_code_prefixed: subject.subject_code_prefixed,
+      subject_code: subject.subject_code_prefixed,
       image: subject.image ? bufferToBase64(subject.image) : null // Assuming bufferToBase64 is defined
     }));
 
